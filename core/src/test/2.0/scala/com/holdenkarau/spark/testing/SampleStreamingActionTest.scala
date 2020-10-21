@@ -14,32 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.holdenkarau.spark.testing
 
 import org.apache.spark._
+import org.apache.spark.util.LongAccumulator
+import org.apache.spark.rdd.RDD
+import org.apache.spark.streaming.dstream._
+import org.scalatest.FunSuite
 
-import org.scalatest.{BeforeAndAfterEach, Suite}
+class SampleStreamingActionTest extends FunSuite with StreamingActionBase {
 
-/**
- * Provides a local `sc`
- * {@link SparkContext} variable, correctly stopping it after each test.
- * The stopping logic is provided in {@link LocalSparkContext}.
- */
-trait PerTestSparkContext extends LocalSparkContext with BeforeAndAfterEach
-    with SparkContextProvider { self: Suite =>
-
-  override def beforeAll(): Unit = {
-    EvilSparkContext.stopActiveSparkContext()
+  test("a simple action") {
+    val input = List(List("hi"), List("bye"))
+    val acc = sc.longAccumulator("acc lengths")
+    val cw = countWordsLength(acc)
+    runAction(input, cw)
+    assert(5L === acc.value)
   }
 
-  override def beforeEach(): Unit = {
-    sc = new SparkContext(conf)
-    setup(sc)
-    super.beforeEach()
-  }
-
-  override def afterEach(): Unit = {
-    super.afterEach()
+  def countWordsLength(acc: LongAccumulator): (DStream[String] => Unit) = {
+    def c(input: DStream[String]): Unit = {
+      input.foreachRDD{r: RDD[String] =>
+        r.foreach{e: String => acc.add(e.length())}}
+    }
+    c _
   }
 }

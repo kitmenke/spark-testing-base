@@ -15,31 +15,23 @@
  * limitations under the License.
  */
 
-package com.holdenkarau.spark.testing
+package org.apache.spark.streaming.dstream
 
-import org.apache.spark._
+import scala.reflect.ClassTag
 
-import org.scalatest.{BeforeAndAfterEach, Suite}
+import org.apache.spark.streaming._
 
 /**
- * Provides a local `sc`
- * {@link SparkContext} variable, correctly stopping it after each test.
- * The stopping logic is provided in {@link LocalSparkContext}.
+ * This is a class to provide access to zerotime information
  */
-trait PerTestSparkContext extends LocalSparkContext with BeforeAndAfterEach
-    with SparkContextProvider { self: Suite =>
+abstract class FriendlyInputDStream[T: ClassTag](
+  @transient var ssc_ : StreamingContext)
+    extends InputDStream[T](ssc_) {
 
-  override def beforeAll(): Unit = {
-    EvilSparkContext.stopActiveSparkContext()
-  }
+  var ourZeroTime: Time = null
 
-  override def beforeEach(): Unit = {
-    sc = new SparkContext(conf)
-    setup(sc)
-    super.beforeEach()
-  }
-
-  override def afterEach(): Unit = {
-    super.afterEach()
+  override def initialize(time: Time): Unit = {
+    ourZeroTime = time
+    super.initialize(time)
   }
 }

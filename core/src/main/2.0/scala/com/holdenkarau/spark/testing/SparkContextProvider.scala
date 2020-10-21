@@ -14,32 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.holdenkarau.spark.testing
 
-import org.apache.spark._
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkConf
 
-import org.scalatest.{BeforeAndAfterEach, Suite}
+trait SparkContextProvider {
+  def sc: SparkContext
 
-/**
- * Provides a local `sc`
- * {@link SparkContext} variable, correctly stopping it after each test.
- * The stopping logic is provided in {@link LocalSparkContext}.
- */
-trait PerTestSparkContext extends LocalSparkContext with BeforeAndAfterEach
-    with SparkContextProvider { self: Suite =>
+  def appID: String = (this.getClass.getName
+    + math.floor(math.random * 10E4).toLong.toString)
 
-  override def beforeAll(): Unit = {
-    EvilSparkContext.stopActiveSparkContext()
+  def conf: SparkConf = {
+    new SparkConf().
+      setMaster("local[*]").
+      setAppName("test").
+      set("spark.ui.enabled", "false").
+      set("spark.app.id", appID).
+      set("spark.driver.host", "localhost")
   }
 
-  override def beforeEach(): Unit = {
-    sc = new SparkContext(conf)
-    setup(sc)
-    super.beforeEach()
-  }
 
-  override def afterEach(): Unit = {
-    super.afterEach()
+  /**
+   * Setup work to be called when creating a new SparkContext. Default implementation
+   * currently sets a checkpoint directory.
+   *
+   * This _should_ be called by the context provider automatically.
+   */
+  def setup(sc: SparkContext): Unit = {
+    sc.setCheckpointDir(Utils.createTempDir().toPath().toString)
   }
 }

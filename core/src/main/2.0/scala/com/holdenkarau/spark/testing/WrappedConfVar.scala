@@ -17,29 +17,9 @@
 
 package com.holdenkarau.spark.testing
 
-import org.apache.spark._
+import org.apache.hadoop.hive.conf.HiveConf.ConfVars
 
-import org.scalatest.{BeforeAndAfterEach, Suite}
-
-/**
- * Provides a local `sc`
- * {@link SparkContext} variable, correctly stopping it after each test.
- * The stopping logic is provided in {@link LocalSparkContext}.
- */
-trait PerTestSparkContext extends LocalSparkContext with BeforeAndAfterEach
-    with SparkContextProvider { self: Suite =>
-
-  override def beforeAll(): Unit = {
-    EvilSparkContext.stopActiveSparkContext()
-  }
-
-  override def beforeEach(): Unit = {
-    sc = new SparkContext(conf)
-    setup(sc)
-    super.beforeEach()
-  }
-
-  override def afterEach(): Unit = {
-    super.afterEach()
-  }
+private[testing] case class WrappedConfVar(cv: ConfVars) {
+  val varname = cv.varname
+  def getDefaultExpr(): String = cv.getDefaultExpr()
 }
