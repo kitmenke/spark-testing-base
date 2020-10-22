@@ -1,5 +1,5 @@
 lazy val root = (project in file("."))
-  .aggregate(core, kafka_0_8)
+  .aggregate(core, kafka_0_8, kafka_0_10)
   .settings(noPublishSettings, commonSettings)
 
 val sparkVersion = settingKey[String]("Spark version")
@@ -7,6 +7,7 @@ val sparkTestingVersion = settingKey[String]("Spark testing base version without
 
 scalafixDependencies in ThisBuild +=
   "com.holdenkarau" %% "spark-scalafix-rules" % "0.1.0-SNAPSHOT"
+
 
 lazy val core = (project in file("core"))
   .settings(
@@ -61,6 +62,27 @@ lazy val kafka_0_8 = {
             Seq(
               "org.apache.spark" %% "spark-streaming-kafka-0-8" % sparkVersion.value)
           }
+        )
+      }
+    )
+}
+
+lazy val kafka_0_10 = {
+  Project("kafka_0_10", file("kafka-0.10"))
+    .dependsOn(core)
+    .settings(
+      name := "spark-testing-kafka-0_10",
+      commonSettings,
+      kafkaPublishSettings,
+      libraryDependencies ++= {
+        excludeJpountz(
+            Seq(
+              "org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion.value,
+              "io.github.embeddedkafka" %% "embedded-kafka" % "2.4.1.1"
+              // Not able to use later versions of embedded kafka because of
+              // java.lang.NoClassDefFoundError: scala/math/Ordering$$anon$7
+              // https://github.com/embeddedkafka/embedded-kafka/issues/202
+            )
         )
       }
     )
@@ -200,3 +222,4 @@ lazy val publishSettings = Seq(
 
 lazy val noPublishSettings =
   skip in publish := true
+
